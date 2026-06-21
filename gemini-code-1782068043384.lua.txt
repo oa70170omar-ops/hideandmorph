@@ -1,0 +1,149 @@
+-- Hide and Morph Environment Test Script (With Auto-Win)
+-- Run this in your Delta executor
+
+local TestConfig = {
+    EnableAutoWin         = true,   -- Feature 6: NEW! Auto-teleports to win/clear the match
+    EnableMorphScanner    = true,   -- Feature 1: Scans workspace for active player morphs
+    EnableHidingSpotRadar  = true,   -- Feature 2: Highlights nearby map hiding spots/nooks
+    EnableClipVisualizer  = true,   -- Feature 3: Highlights thin walls that props can clip through
+    EnableFullBrightToggle = true,   -- Feature 4: Toggles fullbright to see map layouts easily
+    EnableNoclipTest      = true    -- Feature 5: Lets you noclip to test out-of-bounds hiding spots
+}
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+
+print("⚡ Delta Hide & Morph Tester Loaded!")
+
+---------------------------------------------------------
+-- FEATURE 6: Auto-Win Functionality (Seeker & Hider Modes)
+---------------------------------------------------------
+if TestConfig.EnableAutoWin then
+    task.spawn(function()
+        print("🏆 [Feature 6] Auto-Win script loop initiated.")
+        while task.wait(1) do
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            
+            if hrp then
+                -- MODE A: If you are the Seeker/Hunter (Teleport and tag all morphed players)
+                -- We check if you have a weapon/tool or if the game assigns you a seeker role
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        -- Check if they are morphed (hiding) or just standard hiders
+                        local targetHrp = player.Character.HumanoidRootPart
+                        
+                        -- Optional: Customize this condition based on your specific game's team names
+                        if LocalPlayer.TeamColor ~= player.TeamColor or LocalPlayer.Name:lower():match("seeker") or true then
+                            -- Teleport slightly behind them to register a tag/hit
+                            hrp.CFrame = targetHrp.CFrame * CFrame.new(0, 0, 2)
+                            task.wait(0.3) -- Small delay to prevent network kicks
+                        end
+                    end
+                end
+                
+                -- MODE B: If you are a Hider and the map has an "Escape", "Win", or "Finish" pad
+                for _, obj in ipairs(workspace:GetDescendants()) do
+                    if obj:IsA("BasePart") and (obj.Name:lower():match("win") or obj.Name:lower():match("escape") or obj.Name:lower():match("finish")) then
+                        print("🏁 Win pad found! Teleporting for Auto-Win...")
+                        hrp.CFrame = obj.CFrame + Vector3.new(0, 3, 0)
+                        break
+                    end
+                end
+            end
+        end
+    end)
+end
+
+---------------------------------------------------------
+-- FEATURE 1: Active Morph Scanner
+---------------------------------------------------------
+if TestConfig.EnableMorphScanner then
+    task.spawn(function()
+        print("🔍 [Feature 1] Scanning for player morphs in the area...")
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                for _, obj in ipairs(player.Character:GetChildren()) do
+                    if obj:IsA("Model") or (obj:IsA("BasePart") and obj.Name ~= "HumanoidRootPart") then
+                        print(string.format("🎯 Player %s is morphed as: %s", player.Name, obj.Name))
+                    end
+                end
+            end
+        end
+    end)
+end
+
+---------------------------------------------------------
+-- FEATURE 2: Map Hiding Spot ESP / Radar
+---------------------------------------------------------
+if TestConfig.EnableHidingSpotRadar then
+    print("👀 [Feature 2] Hiding Spot Radar Active. Highlighting potential zones...")
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and (obj.Name:lower():match("hide") or obj.Name:lower():match("spot")) then
+            local highlight = Instance.new("BoxHandleAdornment")
+            highlight.Size = obj.Size
+            highlight.Color3 = Color3.fromRGB(0, 255, 128)
+            highlight.AlwaysOnTop = true
+            highlight.ZIndex = 5
+            highlight.Adornee = obj
+            highlight.Parent = obj
+        end
+    end
+end
+
+---------------------------------------------------------
+-- FEATURE 3: Anti-Clip & Thin Wall Visualizer
+---------------------------------------------------------
+if TestConfig.EnableClipVisualizer then
+    print("🚧 [Feature 3] Highlighting thin walls (Potential Clip Glitches) in RED...")
+    for _, part in ipairs(workspace:GetDescendants()) do
+        if part:IsA("BasePart") and part.CanCollide then
+            if part.Size.X < 0.6 or part.Size.Y < 0.6 or part.Size.Z < 0.6 then
+                local box = Instance.new("SelectionBox")
+                box.Color3 = Color3.fromRGB(255, 0, 0)
+                box.Adornee = part
+                box.Parent = part
+            end
+        end
+    end
+end
+
+---------------------------------------------------------
+-- FEATURE 4: Client-Side Fullbright
+---------------------------------------------------------
+if TestConfig.EnableFullBrightToggle then
+    print("☀️ [Feature 4] Fullbright Enabled.")
+    Lighting.Changed:Connect(function()
+        if TestConfig.EnableFullBrightToggle then
+            Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+            Lighting.Brightness = 2
+            Lighting.ClockTime = 14
+            Lighting.FogEnd = 999999
+        end
+    end)
+    Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+    Lighting.Brightness = 2
+    Lighting.ClockTime = 14
+    Lighting.FogEnd = 999999
+end
+
+---------------------------------------------------------
+-- FEATURE 5: Testing Noclip
+---------------------------------------------------------
+if TestConfig.EnableNoclipTest then
+    print("👻 [Feature 5] Local Noclip Active.")
+    RunService.Stepped:Connect(function()
+        local character = LocalPlayer.Character
+        if character then
+            for _, part in ipairs(character:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanCollide then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end)
+end
+
+print("✅ All environment testing features applied successfully via Delta!")
