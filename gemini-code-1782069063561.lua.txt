@@ -1,0 +1,255 @@
+-- Delta Executor Hide & Morph Menu (With Rainbow Hider Outline)
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local ToggleContainer = Instance.new("Frame")
+local UIListLayout = Instance.new("UIListLayout")
+
+local Flags = {
+    AutoWin = false,
+    MorphScanner = false,
+    HidingRadar = false,
+    ClipVisuals = false,
+    Fullbright = false,
+    Noclip = false,
+    RainbowOutline = false -- New Flag
+}
+
+-- UI Setup
+ScreenGui.Name = "HideMorphGui"
+ScreenGui.Parent = game:GetService("CoreGui")
+ScreenGui.ResetOnSpawn = false
+
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MainFrame.Position = UDim2.new(0.1, 0, 0.2, 0)
+MainFrame.Size = UDim2.new(0, 230, 0, 350) -- Extended size slightly for new button
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 8)
+MainCorner.Parent = MainFrame
+
+Title.Name = "Title"
+Title.Parent = MainFrame
+Title.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Font = Enum.Font.SourceSansBold
+Title.Text = "🔮 Hide & Morph Menu"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 16.000
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 8)
+TitleCorner.Parent = Title
+
+ToggleContainer.Name = "ToggleContainer"
+ToggleContainer.Parent = MainFrame
+ToggleContainer.BackgroundTransparency = 1.000
+ToggleContainer.Position = UDim2.new(0, 10, 0, 50)
+ToggleContainer.Size = UDim2.new(1, -20, 1, -60)
+
+UIListLayout.Parent = ToggleContainer
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 6)
+
+local function CreateToggle(text, flagName, callback)
+    local Button = Instance.new("TextButton")
+    local BtnCorner = Instance.new("UICorner")
+    
+    Button.Parent = ToggleContainer
+    Button.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    Button.Size = UDim2.new(1, 0, 0, 35)
+    Button.Font = Enum.Font.SourceSansSemibold
+    Button.Text = text .. " [OFF]"
+    Button.TextColor3 = Color3.fromRGB(180, 180, 180)
+    Button.TextSize = 14.000
+    
+    BtnCorner.CornerRadius = UDim.new(0, 6)
+    BtnCorner.Parent = Button
+
+    Button.MouseButton1Click:Connect(function()
+        Flags[flagName] = not Flags[flagName]
+        if Flags[flagName] then
+            Button.BackgroundColor3 = Color3.fromRGB(50, 150, 100) -- Green
+            Button.Text = text .. " [ON]"
+            Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+        else
+            Button.BackgroundColor3 = Color3.fromRGB(35, 35, 45) -- Reset
+            Button.Text = text .. " [OFF]"
+            Button.TextColor3 = Color3.fromRGB(180, 180, 180)
+        end
+        callback(Flags[flagName])
+    end)
+end
+
+-- Services
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+
+---------------------------------------------------------
+-- CORE FEATURE LOOPS
+---------------------------------------------------------
+
+-- 1. Rainbow Outline Loop
+task.spawn(function()
+    while true do
+        task.wait()
+        if Flags.RainbowOutline then
+            -- Generate a cycling rainbow color based on game time
+            local hue = (tick() % 5) / 5 -- Cycles fully every 5 seconds
+            local rainbowColor = Color3.fromHSV(hue, 1, 1)
+
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character then
+                    local highlight = player.Character:FindFirstChild("HiderRainbowHighlight")
+                    
+                    if not highlight then
+                        -- Create a clean highlight structure if it doesn't exist
+                        highlight = Instance.new("Highlight")
+                        highlight.Name = "HiderRainbowHighlight"
+                        highlight.FillColor = Color3.fromRGB(255, 255, 255)
+                        highlight.FillTransparency = 0.65 -- Sees them clearly behind walls
+                        highlight.OutlineTransparency = 0 -- Perfect solid outline
+                        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop -- See through walls
+                        highlight.Parent = player.Character
+                    end
+                    
+                    highlight.OutlineColor = rainbowColor
+                end
+            end
+        else
+            -- Clean up highlights when turned OFF
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player.Character then
+                    local highlight = player.Character:FindFirstChild("HiderRainbowHighlight")
+                    if highlight then
+                        highlight:Destroy()
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- 2. Auto Win
+task.spawn(function()
+    while task.wait(1) do
+        if Flags.AutoWin then
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        if Flags.AutoWin then
+                            hrp.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 2)
+                            task.wait(0.4)
+                        end
+                    end
+                end
+                for _, obj in ipairs(workspace:GetDescendants()) do
+                    if obj:IsA("BasePart") and (obj.Name:lower():match("win") or obj.Name:lower():match("escape")) then
+                        hrp.CFrame = obj.CFrame + Vector3.new(0, 3, 0)
+                        break
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- 3. Noclip
+RunService.Stepped:Connect(function()
+    if Flags.Noclip then
+        local char = LocalPlayer.Character
+        if char then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end
+end)
+
+-- 4. Fullbright Loop
+Lighting.Changed:Connect(function()
+    if Flags.Fullbright then
+        Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 14
+        Lighting.FogEnd = 999999
+    end
+end)
+
+---------------------------------------------------------
+-- MENU BUTTON COUPLINGS
+---------------------------------------------------------
+CreateToggle("🌈 Rainbow Outline", "RainbowOutline", function() end)
+CreateToggle("🥇 Auto Win", "AutoWin", function() end)
+
+CreateToggle("🔍 Scan Morphs", "MorphScanner", function(state)
+    if state then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                for _, obj in ipairs(player.Character:GetChildren()) do
+                    if obj:IsA("Model") or (obj:IsA("BasePart") and obj.Name ~= "HumanoidRootPart") then
+                        print(player.Name .. " is disguised as: " .. obj.Name)
+                    end
+                end
+            end
+        end
+    end
+end)
+
+CreateToggle("👀 Hiding Spot Radar", "HidingRadar", function(state)
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and (obj.Name:lower():match("hide") or obj.Name:lower():match("spot")) then
+            local box = obj:FindFirstChild("RadarBox")
+            if state and not box then
+                local b = Instance.new("BoxHandleAdornment", obj)
+                b.Name = "RadarBox"
+                b.Size = obj.Size
+                b.Color3 = Color3.fromRGB(0, 255, 128)
+                b.AlwaysOnTop = true
+                b.ZIndex = 5
+                b.Adornee = obj
+            elseif not state and box then
+                box:Destroy()
+            end
+        end
+    end
+end)
+
+CreateToggle("🚧 Clip Visuals", "ClipVisuals", function(state)
+    for _, part in ipairs(workspace:GetDescendants()) do
+        if part:IsA("BasePart") and part.CanCollide then
+            local box = part:FindFirstChild("ClipBox")
+            if state and (part.Size.X < 0.6 or part.Size.Y < 0.6 or part.Size.Z < 0.6) and not box then
+                local s = Instance.new("SelectionBox", part)
+                s.Name = "ClipBox"
+                s.Color3 = Color3.fromRGB(255, 0, 0)
+                s.Adornee = part
+            elseif not state and box then
+                box:Destroy()
+            end
+        end
+    end
+end)
+
+CreateToggle("☀️ Fullbright", "Fullbright", function(state)
+    if state then
+        Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 14
+        Lighting.FogEnd = 999999
+    end
+end)
+
+CreateToggle("👻 Noclip", "Noclip", function() end)
+
+print("✅ Delta Hide & Morph Tester GUI Loaded with Rainbow Outline!")
