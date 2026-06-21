@@ -1,0 +1,212 @@
+-- Hide and Morph Delta Test GUI
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local UIListLayout = Instance.new("UIListLayout")
+local ToggleContainer = Instance.new("Frame")
+
+-- Configuration States
+local Flags = {
+    AutoWin = false,
+    MorphScanner = false,
+    HidingRadar = false,
+    ClipVisuals = false,
+    Fullbright = false,
+    Noclip = false
+}
+
+-- Setup GUI Core
+ScreenGui.Name = "HideMorphGui"
+ScreenGui.Parent = game:GetService("CoreGui")
+ScreenGui.ResetOnSpawn = false
+
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
+MainFrame.Size = UDim2.new(0, 220, 0, 310)
+MainFrame.Active = true
+MainFrame.Draggable = true -- Essential for mobile/Delta users
+
+Title.Name = "Title"
+Title.Parent = MainFrame
+Title.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+Title.BorderSizePixel = 0
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.Font = Enum.Font.SourceSansBold
+Title.Text = "Hide & Morph Tester"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 16.000
+
+ToggleContainer.Name = "ToggleContainer"
+ToggleContainer.Parent = MainFrame
+ToggleContainer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ToggleContainer.BackgroundTransparency = 1.000
+ToggleContainer.Position = UDim2.new(0, 10, 0, 45)
+ToggleContainer.Size = UDim2.new(1, -20, 1, -55)
+
+UIListLayout.Parent = ToggleContainer
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 6)
+
+-- Function to easily generate toggle buttons
+local function CreateToggle(text, flagName, callback)
+    local Button = Instance.new("TextButton")
+    Button.Name = flagName.."Btn"
+    Button.Parent = ToggleContainer
+    Button.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    Button.BorderSizePixel = 0
+    Button.Size = UDim2.new(1, 0, 0, 35)
+    Button.Font = Enum.Font.SourceSans
+    Button.Text = text .. ": OFF"
+    Button.TextColor3 = Color3.fromRGB(200, 200, 200)
+    Button.TextSize = 14.000
+
+    Button.MouseButton1Click:Connect(function()
+        Flags[flagName] = not Flags[flagName]
+        if Flags[flagName] then
+            Button.BackgroundColor3 = Color3.fromRGB(46, 139, 87) -- SeaGreen for ON
+            Button.Text = text .. ": ON"
+            Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+        else
+            Button.BackgroundColor3 = Color3.fromRGB(40, 40, 50) -- Dark grey for OFF
+            Button.Text = text .. ": OFF"
+            Button.TextColor3 = Color3.fromRGB(200, 200, 200)
+        end
+        callback(Flags[flagName])
+    end)
+end
+
+---------------------------------------------------------
+-- FEATURE LOOPS & LOGIC
+---------------------------------------------------------
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+
+-- 1. Auto Win Loop
+task.spawn(function()
+    while task.wait(1) do
+        if Flags.AutoWin then
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                -- Target Seeker Teleportation
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                        if Flags.AutoWin then 
+                            hrp.CFrame = player.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 2)
+                            task.wait(0.4)
+                        end
+                    end
+                end
+                -- Target Escape Pads
+                for _, obj in ipairs(workspace:GetDescendants()) do
+                    if obj:IsA("BasePart") and (obj.Name:lower():match("win") or obj.Name:lower():match("escape")) then
+                        hrp.CFrame = obj.CFrame + Vector3.new(0, 3, 0)
+                        break
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- 2. Morph Scanner Logic
+local function scanMorphs()
+    print("🔍 Scanning player morphs...")
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            for _, obj in ipairs(player.Character:GetChildren()) do
+                if obj:IsA("Model") or (obj:IsA("BasePart") and obj.Name ~= "HumanoidRootPart") then
+                    print(string.format("🎯 %s is morphed as: %s", player.Name, obj.Name))
+                end
+            end
+        end
+    end
+end
+
+-- 3. Noclip Frame Loop
+RunService.Stepped:Connect(function()
+    if Flags.Noclip then
+        local char = LocalPlayer.Character
+        if char then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end
+end)
+
+-- 4. Fullbright Loop
+Lighting.Changed:Connect(function()
+    if Flags.Fullbright then
+        Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 14
+        Lighting.FogEnd = 999999
+    end
+end)
+
+---------------------------------------------------------
+-- BUILDING THE BUTTONS
+---------------------------------------------------------
+CreateToggle("🥇 Auto Win", "AutoWin", function(state) end)
+
+CreateToggle("🔍 Scan Morphs", "MorphScanner", function(state)
+    if state then scanMorphs() end
+end)
+
+CreateToggle("👀 Hiding Spot Radar", "HidingRadar", function(state)
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and (obj.Name:lower():match("hide") or obj.Name:lower():match("spot")) then
+            local oldBox = obj:FindFirstChild("RadarBox")
+            if state and not oldBox then
+                local box = Instance.new("BoxHandleAdornment")
+                box.Name = "RadarBox"
+                box.Size = obj.Size
+                box.Color3 = Color3.fromRGB(0, 255, 128)
+                box.AlwaysOnTop = true
+                box.ZIndex = 5
+                box.Adornee = obj
+                box.Parent = obj
+            elseif not state and oldBox then
+                oldBox:Destroy()
+            end
+        end
+    end
+end)
+
+CreateToggle("🚧 Clip Visuals", "ClipVisuals", function(state)
+    for _, part in ipairs(workspace:GetDescendants()) do
+        if part:IsA("BasePart") and part.CanCollide then
+            local oldSelection = part:FindFirstChild("ClipBox")
+            if state and (part.Size.X < 0.6 or part.Size.Y < 0.6 or part.Size.Z < 0.6) and not oldSelection then
+                local box = Instance.new("SelectionBox")
+                box.Name = "ClipBox"
+                box.Color3 = Color3.fromRGB(255, 0, 0)
+                box.Adornee = part
+                box.Parent = part
+            elseif not state and oldSelection then
+                oldSelection:Destroy()
+            end
+        end
+    end
+end)
+
+CreateToggle("☀️ Fullbright", "Fullbright", function(state)
+    if state then
+        Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 14
+        Lighting.FogEnd = 999999
+    end
+end)
+
+CreateToggle("👻 Noclip", "Noclip", function(state) end)
+
+print("✅ Delta Hide & Morph Tester GUI Loaded!")
